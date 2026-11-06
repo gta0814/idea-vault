@@ -1,0 +1,10 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Repomix outputs
+repomix-output.xml
+repomix-output.txt
+
+# Node modules
+node_modules/

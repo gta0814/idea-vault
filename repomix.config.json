@@ -1,0 +1,25 @@
+{
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "removeComments": false,
+    "showLineNumbers": false,
+    "topFiles": [
+      "AGENTS.md",
+      "README.md"
+    ]
+  },
+  "include": [
+    "AGENTS.md",
+    "README.md",
+    "ideas/**"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "customPatterns": [
+      "**/*.jpg",
+      "**/*.png",
+      "**/*.gif"
+    ]
+  }
+}

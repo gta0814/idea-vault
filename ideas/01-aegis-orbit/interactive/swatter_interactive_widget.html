@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aegis-Orbit 卫星翼折叠电蚊拍 交互仿真模型</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @keyframes zapSpark {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; filter: drop-shadow(0 0 8px #38bdf8); }
+    }
+    .sparking {
+      animation: zapSpark 0.15s infinite;
+    }
+    @keyframes uvPulse {
+      0%, 100% { filter: drop-shadow(0 0 4px #a855f7); }
+      50% { filter: drop-shadow(0 0 16px #c084fc); }
+    }
+    .uv-glow {
+      animation: uvPulse 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-2 sm:p-4">
+  <div class="max-w-xl mx-auto bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 sm:p-5 shadow-lg space-y-4">
+    
+    <!-- 头部标题与状态栏 -->
+    <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+          <h2 class="font-bold text-base sm:text-lg tracking-wide text-[var(--foreground)]">AEGIS-ORBIT 轨道卫士</h2>
+        </div>
+        <p class="text-xs text-[var(--muted-foreground)]">卫星太阳翼便携折叠电蚊拍 · Edmonton 户外特化型</p>
+      </div>
+      <div id="safety-badge" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        <span>物理断电互锁</span>
+      </div>
+    </div>
+
+    <!-- 动态机构可视化画布 (SVG) -->
+    <div class="relative w-full h-52 bg-slate-950/80 rounded-xl border border-slate-800/80 flex items-center justify-center overflow-hidden">
+      <!-- 背景网格刻度 -->
+      <div class="absolute inset-0 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
+      
+      <svg id="visualizer-svg" viewBox="0 0 400 220" class="w-full h-full max-h-52 select-none">
+        <defs>
+          <!-- 太阳能电池格纹理 -->
+          <pattern id="solar-grid" width="6" height="6" patternUnits="userSpaceOnUse">
+            <rect width="6" height="6" fill="#0f172a"/>
+            <path d="M 6 0 L 0 0 0 6" fill="none" stroke="#1e293b" stroke-width="0.7"/>
+          </pattern>
+          <!-- 电网网眼纹理 -->
+          <pattern id="mesh-grid" width="4" height="4" patternUnits="userSpaceOnUse">
+            <path d="M 0 2 L 4 2 M 2 0 L 2 4" fill="none" stroke="#94a3b8" stroke-width="0.5" opacity="0.6"/>
+          </pattern>
+          <linearGradient id="titanium-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fbbf24"/>
+            <stop offset="100%" stop-color="#b45309"/>
+          </linearGradient>
+          <linearGradient id="body-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#334155"/>
+            <stop offset="50%" stop-color="#475569"/>
+            <stop offset="100%" stop-color="#1e293b"/>
+          </linearGradient>
+        </defs>
+
+        <!-- 登山杖延长柄组件 (动态显示) -->
+        <g id="pole-group" class="transition-all duration-300 opacity-0" transform="translate(192, 165)">
+          <rect x="-4" y="0" width="16" height="50" rx="3" fill="#0f172a" stroke="#334155" stroke-width="1.5"/>
+          <line x1="4" y1="5" x2="4" y2="45" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3 3"/>
+          <text x="24" y="28" fill="#64748b" font-size="9" font-family="sans-serif">1/4" 碳纤登山杖节 (扩展至1.2m)</text>
+        </g>
+
+        <!-- 主筒体 (八棱战术机身) -->
+        <g id="main-handle" transform="translate(182, 70)">
+          <!-- 机身外壳 -->
+          <rect x="0" y="0" width="36" height="95" rx="6" fill="url(#body-grad)" stroke="#64748b" stroke-width="1.5"/>
+          <!-- 战术滚花手柄部分 -->
+          <rect x="3" y="32" width="30" height="40" rx="3" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+          <!-- 双侧握力感应条 -->
+          <rect id="grip-sensor" x="1" y="36" width="3" height="32" rx="1.5" fill="#0284c7" class="transition-colors duration-150"/>
+          <rect x="32" y="36" width="3" height="32" rx="1.5" fill="#0284c7" class="transition-colors duration-150"/>
+          <!-- 控制面板按键 -->
+          <circle cx="18" cy="20" r="5" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5"/>
+          <circle id="power-led" cx="18" cy="20" r="2.5" fill="#38bdf8" class="transition-colors duration-200"/>
+          <!-- 底部战术手电透镜筒 -->
+          <rect x="2" y="93" width="32" height="8" rx="2" fill="#0f172a" stroke="#475569"/>
+          <circle id="torch-beam" cx="18" cy="97" r="3" fill="#64748b" class="transition-colors duration-200"/>
+          <!-- 寻蚊补光灯 (拍头正向) -->
+          <rect id="aim-led" x="14" y="-3" width="8" height="4" rx="1" fill="#38bdf8" opacity="0.3"/>
+        </g>
+
+        <!-- 左侧卫星翼 (铰链机械连杆动态展开) -->
+        <g id="wing-left" transform="translate(183, 72) rotate(-85 0 20)">
+          <!-- 钛金连杆 -->
+          <line x1="0" y1="20" x2="-22" y2="15" stroke="url(#titanium-gold)" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="0" cy="20" r="3.5" fill="url(#titanium-gold)"/>
+          <circle cx="-22" cy="15" r="3" fill="url(#titanium-gold)"/>
+          
+          <!-- 左翼主框 (高压网面 + 太阳能饰板) -->
+          <g transform="translate(-85, -28)">
+            <rect x="0" y="0" width="60" height="75" rx="5" fill="#090d16" stroke="#475569" stroke-width="1.5"/>
+            <!-- 太阳能纹理边缘 -->
+            <rect x="4" y="4" width="16" height="67" rx="3" fill="url(#solar-grid)" stroke="#334155" stroke-width="0.8"/>
+            <!-- 灭蚊高压金属网面 -->
+            <rect id="left-grid" x="22" y="4" width="34" height="67" rx="3" fill="url(#mesh-grid)" stroke="#475569" stroke-width="0.8"/>
+            <!-- 电弧火花 (握持击打时显现) -->
+            <path id="left-spark" class="hidden text-sky-400" d="M28,25 L34,35 L40,30 L45,45" stroke="#38bdf8" stroke-width="2" fill="none"/>
+            <!-- 接触电极触点 -->
+            <circle cx="58" cy="40" r="2.5" fill="url(#titanium-gold)"/>
+          </g>
+        </g>
+
+        <!-- 右侧卫星翼 (铰链机械连杆动态展开) -->
+        <g id="wing-right" transform="translate(217, 72) rotate(85 0 20)">
+          <!-- 钛金连杆 -->
+          <line x1="0" y1="20" x2="22" y2="15" stroke="url(#titanium-gold)" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="0" cy="20" r="3.5" fill="url(#titanium-gold)"/>
+          <circle cx="22" cy="15" r="3" fill="url(#titanium-gold)"/>
+          
+          <!-- 右翼主框 (高压网面 + 太阳能饰板) -->
+          <g transform="translate(25, -28)">
+            <rect x="0" y="0" width="60" height="75" rx="5" fill="#090d16" stroke="#475569" stroke-width="1.5"/>
+            <!-- 灭蚊高压金属网面 -->
+            <rect id="right-grid" x="4" y="4" width="34" height="67" rx="3" fill="url(#mesh-grid)" stroke="#475569" stroke-width="0.8"/>
+            <!-- 太阳能纹理边缘 -->
+            <rect x="40" y="4" width="16" height="67" rx="3" fill="url(#solar-grid)" stroke="#334155" stroke-width="0.8"/>
+            <!-- 电弧火花 (握持击打时显现) -->
+            <path id="right-spark" class="hidden text-sky-400" d="M12,20 L18,32 L10,40 L22,50" stroke="#38bdf8" stroke-width="2" fill="none"/>
+            <!-- 接触电极触点 -->
+            <circle cx="2" cy="40" r="2.5" fill="url(#titanium-gold)"/>
+          </g>
+        </g>
+
+        <!-- 战术手电筒光锥效果 (在手电模式下激活) -->
+        <polygon id="torch-cone" points="184,175 216,175 290,220 110,220" fill="url(#torch-grad)" opacity="0" class="transition-opacity duration-300 pointer-events-none"/>
+        <linearGradient id="torch-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.5"/>
+          <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+        </linearGradient>
+
+        <!-- 状态文本HUD -->
+        <text id="hud-status" x="14" y="24" fill="#94a3b8" font-size="11" font-family="monospace">MODE: EDC_FOLDED (0V)</text>
+        <text id="hud-voltage" x="14" y="40" fill="#38bdf8" font-size="10" font-family="monospace">VOLTAGE: 0.0 kV [SAFE]</text>
+      </svg>
+
+      <!-- 实时手握握力击发提示浮层 (挥打模式时出现) -->
+      <button id="squeeze-btn" class="hidden absolute bottom-3 px-4 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 active:bg-sky-600 text-slate-950 font-bold text-xs shadow-lg transition-transform active:scale-95 flex items-center gap-1.5 cursor-pointer">
+        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/></svg>
+        <span>按住握把：瞬时通电挥打 (3500V)</span>
+      </button>
+    </div>
+
+    <!-- 交互控制面板：展开推杆与工作模式 -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+      <!-- 机械展开滑轨控制器 -->
+      <div class="bg-[var(--secondary)]/40 rounded-xl p-3 border border-[var(--border)]">
+        <div class="flex justify-between items-center mb-1.5">
+          <label class="text-xs font-semibold text-[var(--foreground)] flex items-center gap-1">
+            <svg class="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+            <span>太阳翼展开机构滑块</span>
+          </label>
+          <span id="deploy-label" class="text-xs font-mono font-bold text-cyan-400">0% (闭合折叠)</span>
+        </div>
+        <input id="deploy-slider" type="range" min="0" max="100" value="0" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+        <div class="flex justify-between text-[10px] text-[var(--muted-foreground)] mt-1">
+          <span>22cm 筒形收纳</span>
+          <span>50% 半开(断电)</span>
+          <span>100% 满展自锁</span>
+        </div>
+      </div>
+
+      <!-- 工作模式切换拨盘 -->
+      <div class="bg-[var(--secondary)]/40 rounded-xl p-3 border border-[var(--border)]">
+        <label class="text-xs font-semibold text-[var(--foreground)] block mb-1.5">多功能模式旋钮 (3合1)</label>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="mode-btn px-1 py-1.5 rounded text-[11px] font-medium bg-cyan-500 text-slate-950 text-center transition-colors" data-mode="edc">
+            战术手电
+          </button>
+          <button class="mode-btn px-1 py-1.5 rounded text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 text-center transition-colors" data-mode="battle">
+            击蚊模式
+          </button>
+          <button class="mode-btn px-1 py-1.5 rounded text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 text-center transition-colors" data-mode="trap">
+            营地诱蚊
+          </button>
+          <button class="mode-btn px-1 py-1.5 rounded text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 text-center transition-colors" data-mode="power">
+            反向充电
+          </button>
+        </div>
+        <!-- 登山杖模块开关 -->
+        <div class="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border)]/50">
+          <span class="text-[11px] text-[var(--muted-foreground)]">旋接登山杖加长节 (1/4"螺口)</span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="pole-toggle" class="sr-only peer">
+            <div class="w-7 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-cyan-500"></div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 关键参数实时卡片 -->
+    <div class="grid grid-cols-3 gap-2 text-center text-xs">
+      <div class="bg-[var(--secondary)]/30 p-2 rounded-lg border border-[var(--border)]">
+        <div class="text-[10px] text-[var(--muted-foreground)]">物理折叠长度</div>
+        <div id="stat-length" class="font-bold text-[var(--foreground)] mt-0.5">22.0 cm</div>
+      </div>
+      <div class="bg-[var(--secondary)]/30 p-2 rounded-lg border border-[var(--border)]">
+        <div class="text-[10px] text-[var(--muted-foreground)]">电池剩余 / 规格</div>
+        <div class="font-bold text-cyan-400 mt-0.5">21700 / 5000mAh</div>
+      </div>
+      <div class="bg-[var(--secondary)]/30 p-2 rounded-lg border border-[var(--border)]">
+        <div class="text-[10px] text-[var(--muted-foreground)]">防护等级 / 材质</div>
+        <div class="font-bold text-amber-400 mt-0.5">IPX5 / 航空铝骨架</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // 状态管理
+    const state = {
+      deployPercent: 0, // 0 to 100
+      mode: 'edc',      // 'edc', 'battle', 'trap', 'power'
+      poleAttached: false,
+      isSqueezing: false
+    };
+
+    // DOM 元素引用
+    const slider = document.getElementById('deploy-slider');
+    const deployLabel = document.getElementById('deploy-label');
+    const wingLeft = document.getElementById('wing-left');
+    const wingRight = document.getElementById('wing-right');
+    const leftGrid = document.getElementById('left-grid');
+    const rightGrid = document.getElementById('right-grid');
+    const leftSpark = document.getElementById('left-spark');
+    const rightSpark = document.getElementById('right-spark');
+    const hudStatus = document.getElementById('hud-status');
+    const hudVoltage = document.getElementById('hud-voltage');
+    const safetyBadge = document.getElementById('safety-badge');
+    const squeezeBtn = document.getElementById('squeeze-btn');
+    const torchCone = document.getElementById('torch-cone');
+    const torchBeam = document.getElementById('torch-beam');
+    const aimLed = document.getElementById('aim-led');
+    const powerLed = document.getElementById('power-led');
+    const gripSensor = document.getElementById('grip-sensor');
+    const poleGroup = document.getElementById('pole-group');
+    const statLength = document.getElementById('stat-length');
+    const modeBtns = document.querySelectorAll('.mode-btn');
+
+    // 核心渲染与状态机更新
+    function updateVisuals() {
+      const p = state.deployPercent / 100;
+      
+      // 左右翼旋转插值: 闭合状态 -85° / +85° -> 完全展开 0°
+      const angleL = -85 + (85 * p);
+      const angleR = 85 - (85 * p);
+      wingLeft.setAttribute('transform', `translate(183, 72) rotate(${angleL} 0 20)`);
+      wingRight.setAttribute('transform', `translate(217, 72) rotate(${angleR} 0 20)`);
+
+      // 展开标签
+      deployLabel.innerText = `${state.deployPercent}% (${p === 1 ? '已自锁展开' : (p === 0 ? '闭合折叠' : '展开中-物理断电')})`;
+      deployLabel.className = `text-xs font-mono font-bold ${p === 1 ? 'text-emerald-400' : (p === 0 ? 'text-cyan-400' : 'text-amber-400')}`;
+
+      // 安全互锁状态
+      const isLockedOpen = (p >= 0.98);
+
+      if (isLockedOpen) {
+        safetyBadge.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg><span>触点导通·安全待发</span>`;
+        safetyBadge.className = 'px-2.5 py-1 rounded-full text-xs font-semibold bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 flex items-center gap-1.5';
+      } else {
+        safetyBadge.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg><span>物理断电互锁 (${Math.round((1-p)*100)}% 闭锁)</span>`;
+        safetyBadge.className = 'px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5';
+      }
+
+      // 模式处理
+      squeezeBtn.classList.add('hidden');
+      torchCone.style.opacity = '0';
+      torchBeam.setAttribute('fill', '#64748b');
+      aimLed.setAttribute('opacity', '0.1');
+      leftSpark.classList.add('hidden');
+      rightSpark.classList.add('hidden');
+      leftGrid.classList.remove('uv-glow', 'sparking');
+      rightGrid.classList.remove('uv-glow', 'sparking');
+
+      if (state.mode === 'edc') {
+        // 战术手电模式
+        torchCone.style.opacity = '0.9';
+        torchBeam.setAttribute('fill', '#ffffff');
+        hudStatus.innerText = 'MODE: TACTICAL_TORCH (800 lm)';
+        hudVoltage.innerText = 'VOLTAGE: 0.0 kV [SAFE]';
+        powerLed.setAttribute('fill', '#ffffff');
+      } else if (state.mode === 'battle') {
+        // 击蚊模式
+        if (isLockedOpen) {
+          squeezeBtn.classList.remove('hidden');
+          aimLed.setAttribute('opacity', '1');
+          if (state.isSqueezing) {
+            hudStatus.innerText = 'STATUS: FIRING! (DISCHARGE)';
+            hudVoltage.innerText = 'VOLTAGE: 3.5 kV [HIGH HAZARD]';
+            leftSpark.classList.remove('hidden');
+            rightSpark.classList.remove('hidden');
+            leftSpark.classList.add('sparking');
+            rightSpark.classList.add('sparking');
+            gripSensor.setAttribute('fill', '#ef4444');
+            powerLed.setAttribute('fill', '#ef4444');
+          } else {
+            hudStatus.innerText = 'MODE: BATTLE_READY (ARMED)';
+            hudVoltage.innerText = 'VOLTAGE: 0.0 kV (GRIP TO FIRE)';
+            gripSensor.setAttribute('fill', '#0284c7');
+            powerLed.setAttribute('fill', '#38bdf8');
+          }
+        } else {
+          hudStatus.innerText = 'MODE: BATTLE (LOCKED - DEPLOY WINGS)';
+          hudVoltage.innerText = 'VOLTAGE: 0.0 kV (HARDWARE INTERLOCKED)';
+          powerLed.setAttribute('fill', '#f59e0b');
+        }
+      } else if (state.mode === 'trap') {
+        // 营地诱蚊模式
+        if (isLockedOpen) {
+          hudStatus.innerText = 'MODE: UV_CAMP_TRAP (395nm ACTIVE)';
+          hudVoltage.innerText = 'VOLTAGE: 2.2 kV (CONTINUOUS)';
+          leftGrid.classList.add('uv-glow');
+          rightGrid.classList.add('uv-glow');
+          aimLed.setAttribute('opacity', '0.9');
+          aimLed.setAttribute('fill', '#c084fc');
+          powerLed.setAttribute('fill', '#a855f7');
+        } else {
+          hudStatus.innerText = 'MODE: UV_TRAP (DEPLOY WINGS FIRST)';
+          hudVoltage.innerText = 'VOLTAGE: 0.0 kV [INTERLOCKED]';
+          powerLed.setAttribute('fill', '#f59e0b');
+        }
+      } else if (state.mode === 'power') {
+        // 反向充电宝
+        hudStatus.innerText = 'MODE: POWERBANK (20W PD OUTPUT)';
+        hudVoltage.innerText = 'OUTPUT: 5V/3A 9V/2.22A TO PHONE';
+        powerLed.setAttribute('fill', '#10b981');
+      }
+
+      // 登山杖更新
+      if (state.poleAttached) {
+        poleGroup.classList.remove('opacity-0');
+        poleGroup.classList.add('opacity-100');
+        statLength.innerText = isLockedOpen ? '120.0 cm (杖态)' : '85.0 cm (杖态)';
+      } else {
+        poleGroup.classList.add('opacity-0');
+        poleGroup.classList.remove('opacity-100');
+        statLength.innerText = isLockedOpen ? '38.0 cm (展开)' : '22.0 cm (收纳)';
+      }
+    }
+
+    // 事件绑定
+    slider.addEventListener('input', (e) => {
+      state.deployPercent = parseInt(e.target.value);
+      updateVisuals();
+    });
+
+    modeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        modeBtns.forEach(b => {
+          b.className = 'mode-btn px-1 py-1.5 rounded text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 text-center transition-colors';
+        });
+        btn.className = 'mode-btn px-1 py-1.5 rounded text-[11px] font-medium bg-cyan-500 text-slate-950 text-center transition-colors';
+        state.mode = btn.dataset.mode;
+        updateVisuals();
+      });
+    });
+
+    // 握把挤压击发
+    squeezeBtn.addEventListener('mousedown', () => { state.isSqueezing = true; updateVisuals(); });
+    window.addEventListener('mouseup', () => { if (state.isSqueezing) { state.isSqueezing = false; updateVisuals(); } });
+    squeezeBtn.addEventListener('touchstart', (e) => { e.preventDefault(); state.isSqueezing = true; updateVisuals(); });
+    window.addEventListener('touchend', () => { if (state.isSqueezing) { state.isSqueezing = false; updateVisuals(); } });
+
+    // 登山杖开关
+    document.getElementById('pole-toggle').addEventListener('change', (e) => {
+      state.poleAttached = e.target.checked;
+      updateVisuals();
+    });
+
+    // 初始渲染
+    updateVisuals();
+  </script>
+</body>
+</html>
