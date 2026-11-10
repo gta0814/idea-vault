@@ -85,3 +85,31 @@
 4. **原子化合并与分支即刻修剪 (Merge-and-Prune Lifecycle)**：
    * PR 满足 $\ge 2$ AI 赞同并 Merge 到 `main` 分支后，**必须立即删除（Delete）对应的功能分支**。
    * 确保 `main` 分支永远是唯一线性的单一事实来源（SSOT），杜绝废弃分支滋生与状态混乱。
+
+### 4.2 极简 Token 跨模型协作规范 (Token-Frugal Invariants)
+
+为了避免跨 AI 协作时产生海量上下文与 Token 浪费，所有参与审查与讨论的 AI 必须执行**极致低 Token 协议**：
+
+1. **增量优先摄取（Delta-First Ingestion —— 节省 95% Token）**：
+   * **严禁全库灌入**：审查 PR 的 AI **严禁读取整个仓库或全量 Idea 目录**（全库超 20,000+ tokens）。
+   * **极速单吸 `.diff`**：必须通过 GitHub 原生 unified diff 接口摄取：
+     ```bash
+     curl -sL https://github.com/gta0814/idea-vault/pull/{PR_ID}.diff
+     ```
+     单次上下文消费仅 **150 ~ 500 tokens**，精准聚焦改动行。
+2. **指针式引证（Pointer References）**：
+   * 讨论既有规范时，仅引用行号指针（如 `01_SPEC.md#L42-L55`），**严禁在回复中大段复制粘贴原有文档**。
+3. **微投票回复语法（Micro-Vote Syntax —— 节省 85% Token）**：
+   * **零寒暄原则（Zero Fluff）**：严禁任何礼貌性客套话（如 "Hello, as an AI model..."）。
+   * 必须严格使用 $\le 60$ tokens 的紧凑裁决块输出结果：
+     ```markdown
+     ### [VOTE] APPROVED
+     - **AI**: {Model_Name} | **Diff**: {Commit_SHA}
+     - **Rationale**:
+       1. [Feasibility] {<= 25 字验证物理/架构核心逻辑}
+       2. [Constraint] {<= 25 字验证未破坏既有红线}
+     ```
+4. **分级按需打包（Graded Repomix Profiles）**：
+   * 若需在网页版 AI（ChatGPT/Grok）中初始化上下文，按需分级拉取，严禁打包整个 `ideas/`：
+     - **只读状态卡**：`npx repomix --include "ideas/02-cuddle-loungewear/README.md" --copy` (~750 tokens)
+     - **单项目深度文档**：`npx repomix --include "ideas/02-cuddle-loungewear/*.md" --copy` (~4,000 tokens)

@@ -20,21 +20,26 @@
 * 本仓库作为当前工作区，Antigravity 可自动索引所有 `.specs` 与 `ideas/` 下的 Markdown、HTML 及交互组件。
 * 任何代码与仿真改动均可通过 Git 进行原子化 Commit。
 
-### 2. 在 ChatGPT / Grok / Gemini 网页版中使用
-* **一键复制全量上下文到剪贴板**：
-  在项目根目录下运行：
-  ```bash
-  npx repomix --copy --include "ideas/01-aegis-orbit/**"
-  ```
-* 直接在聊天框按 `Ctrl+V`，任何网页端 AI 均可瞬间同步该 Idea 的完整规格与设计约束。
+### 2. 在 ChatGPT / Grok / Gemini 网页版中使用 (极致低 Token 模式)
+* **分级按需复制到剪贴板（避免全库 20k+ tokens 冗余）**：
+  * **级别 1：快速感知（仅 Idea 状态卡，~750 Tokens）**：
+    ```bash
+    npx repomix --copy --include "ideas/02-cuddle-loungewear/README.md"
+    ```
+  * **级别 2：完整白皮书（仅该 Idea 规格与商业案，~5,000 Tokens）**：
+    ```bash
+    npx repomix --copy --include "ideas/02-cuddle-loungewear/*.md"
+    ```
+* 直接在聊天框按 `Ctrl+V`，网页端 AI 即可在最低 Token 消耗下掌握关键约束。
 
 ### 3. 跨 AI 意见协商与 PR 提案管道 (AI Discussion & RFC Process)
 * **严禁私自篡改**：外部 AI 若对任何 Idea 提出建议或质疑，必须通过 Pull Request 进行协商。
-* **核心四大原则**：
+* **核心四大原则与极低 Token 规范**：
   1. 🔒 **单一 PR 互斥锁**：全仓库同一时刻**仅允许存在 1 个处于 Open 状态的 PR**，严禁多开；
-  2. 🏷️ **身份标定**：标题必须形如 `[AI-RFC][Model-Name] ...`，并按模板填写；
-  3. ⚖️ **多 AI 共识门禁**：必须获得除发起者外 **≥ 2 个不同生态的独立 AI** 审阅并签署 `APPROVED`；
-  4. 🧹 **合并即删除**：PR 达成共识 Merge 后，源分支立即删除，维持主干单一事实来源。
+  2. ⚡ **单吸 Diff 增量（节省 95% Token）**：审阅 PR 时禁止全库输入，直接 `curl -sL <PR_URL>.diff`（仅 ~200 Tokens）；
+  3. 🏷️ **身份标定与微投票（节省 85% Token）**：PR 标明 AI 型号，评审 AI 使用 `< 60 Tokens` 的高密裁决语法回帖，零寒暄客套；
+  4. ⚖️ **多 AI 共识门禁**：必须获得除发起者外 **≥ 2 个不同生态的独立 AI** 签署 `APPROVED`；
+  5. 🧹 **合并即删除**：PR 达成共识 Merge 后，源分支立即删除，维持主干单一事实来源。
 * 详见系统契约：[AGENTS.md](./AGENTS.md#4-跨-ai-提案与多模型共识仲裁协议-inter-agent-rfc--pr-consensus-protocol)。
 
 ---

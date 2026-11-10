@@ -2,24 +2,29 @@
   "output": {
     "filePath": "repomix-output.xml",
     "style": "xml",
-    "removeComments": false,
+    "removeComments": true,
+    "removeEmptyLines": true,
     "showLineNumbers": false,
-    "topFiles": [
-      "AGENTS.md",
-      "README.md"
-    ]
+    "parsableStyle": true
   },
   "include": [
     "AGENTS.md",
     "README.md",
-    "ideas/**"
+    "ideas/**/*.md"
   ],
   "ignore": {
     "useGitignore": true,
     "customPatterns": [
       "**/*.jpg",
       "**/*.png",
-      "**/*.gif"
+      "**/*.gif",
+      "**/*.svg",
+      "**/*.mp4",
+      "**/interactive/**",
+      "repomix-output.xml"
     ]
+  },
+  "tokenCount": {
+    "encoding": "o200k_base"
   }
 }
