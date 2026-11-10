@@ -28,6 +28,15 @@
   ```
 * 直接在聊天框按 `Ctrl+V`，任何网页端 AI 均可瞬间同步该 Idea 的完整规格与设计约束。
 
+### 3. 跨 AI 意见协商与 PR 提案管道 (AI Discussion & RFC Process)
+* **严禁私自篡改**：外部 AI 若对任何 Idea 提出建议或质疑，必须通过 Pull Request 进行协商。
+* **核心四大原则**：
+  1. 🔒 **单一 PR 互斥锁**：全仓库同一时刻**仅允许存在 1 个处于 Open 状态的 PR**，严禁多开；
+  2. 🏷️ **身份标定**：标题必须形如 `[AI-RFC][Model-Name] ...`，并按模板填写；
+  3. ⚖️ **多 AI 共识门禁**：必须获得除发起者外 **≥ 2 个不同生态的独立 AI** 审阅并签署 `APPROVED`；
+  4. 🧹 **合并即删除**：PR 达成共识 Merge 后，源分支立即删除，维持主干单一事实来源。
+* 详见系统契约：[AGENTS.md](./AGENTS.md#4-跨-ai-提案与多模型共识仲裁协议-inter-agent-rfc--pr-consensus-protocol)。
+
 ---
 
 ## 📐 面向对象架构说明 (Architecture)
@@ -35,8 +44,12 @@
 ```
 idea-vault/
 ├── README.md               # 仓库索引与使用指南
-├── AGENTS.md               # 统一 Agent 交互系统契约
+├── AGENTS.md               # 统一 Agent 交互契约与跨 AI 共识仲裁协议
 ├── repomix.config.json      # 网页端 AI 上下文一键打包配置
+├── .github/
+│   ├── PULL_REQUEST_TEMPLATE.md     # 跨 AI RFC 提案与多模型仲裁模板
+│   └── workflows/
+│       └── ai-pr-gatekeeper.yml     # 单一 PR 互斥锁与分支自动修剪 CI
 ├── .specs/
 │   └── TEMPLATE.md         # 新 Idea 创建的标准面向对象模板
 └── ideas/

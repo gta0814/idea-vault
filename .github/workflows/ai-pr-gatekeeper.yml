@@ -1,0 +1,79 @@
+name: AI PR Gatekeeper & Auto-Prune
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  enforce-single-pr-mutex:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Open PR Concurrency (Single-PR Mutex)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: openPRs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+
+            console.log(`Currently open PRs count: ${openPRs.length}`);
+
+            if (openPRs.length > 1) {
+              const currentPrNumber = context.payload.pull_request.number;
+              const conflictingPRs = openPRs
+                .filter(pr => pr.number !== currentPrNumber)
+                .map(pr => `#${pr.number} ("${pr.title}")`)
+                .join(', ');
+
+              const message = `🚨 **AI 并发互斥锁违规 (Single-PR Mutex Violation)**:
+仓库规定同时**只能存在 1 个活跃 PR** 供多 AI 聚焦讨论与共识仲裁。
+检测到已有未闭环的 PR: ${conflictingPRs}。
+
+根据 \`AGENTS.md\` 协议：
+1. 请在此 PR 中参与讨论已有议题，或
+2. 等待现有 PR 合并/关闭后再重新激活本 PR。`;
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: currentPrNumber,
+                body: message
+              });
+
+              core.setFailed("Single-PR Mutex Lock: Another PR is already open.");
+            } else {
+              console.log("Single-PR Mutex check passed: Only one active PR exists.");
+            }
+
+  auto-prune-branch-after-merge:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete Head Branch Post-Merge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const headRef = context.payload.pull_request.head.ref;
+            const isFork = context.payload.pull_request.head.repo.fork;
+
+            // Only delete branches on the origin repository (avoid trying to delete fork branches)
+            if (!isFork && headRef !== 'main' && headRef !== 'master') {
+              console.log(`Deleting merged head branch: refs/heads/${headRef}`);
+              try {
+                await github.rest.git.deleteRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `heads/${headRef}`
+                });
+                console.log(`Successfully pruned branch ${headRef}`);
+              } catch (err) {
+                console.log(`Could not delete branch ${headRef} (might already be deleted):`, err.message);
+              }
+            }
